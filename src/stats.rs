@@ -7,6 +7,8 @@ pub struct Stats {
     pub total_checks: usize,
     pub uptime_percent: f64,
     pub avg_response_ms: Option<f64>,
+    /// 95% of checks responded at least this fast.
+    pub p95_response_ms: Option<i64>,
 }
 
 pub fn compute(checks: &[Check]) -> Stats {
@@ -15,22 +17,32 @@ pub fn compute(checks: &[Check]) -> Stats {
             total_checks: 0,
             uptime_percent: 100.0,
             avg_response_ms: None,
+            p95_response_ms: None,
         };
     }
 
     let up = checks.iter().filter(|c| c.up).count();
-    let times: Vec<i64> = checks.iter().filter_map(|c| c.response_ms).collect();
-    let avg_response_ms = if times.is_empty() {
-        None
+    let mut times: Vec<i64> = checks.iter().filter_map(|c| c.response_ms).collect();
+    times.sort_unstable();
+    let (avg_response_ms, p95_response_ms) = if times.is_empty() {
+        (None, None)
     } else {
-        Some(times.iter().sum::<i64>() as f64 / times.len() as f64)
+        let avg = times.iter().sum::<i64>() as f64 / times.len() as f64;
+        (Some(avg), Some(percentile(&times, 95.0)))
     };
 
     Stats {
         total_checks: checks.len(),
         uptime_percent: up as f64 * 100.0 / checks.len() as f64,
         avg_response_ms,
+        p95_response_ms,
     }
+}
+
+/// Nearest-rank percentile. `sorted` must be ascending and non-empty.
+fn percentile(sorted: &[i64], pct: f64) -> i64 {
+    let rank = (pct / 100.0 * sorted.len() as f64).ceil() as usize;
+    sorted[rank.clamp(1, sorted.len()) - 1]
 }
 
 /// Parses a window such as "30m" or "24h" into seconds.
