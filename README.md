@@ -27,4 +27,4 @@ PULSE_API_TOKEN=change-me cargo run
 | GET | `/health` | Liveness, no auth |
 | GET / POST | `/monitors` | List or create monitors |
 | GET / DELETE | `/monitors/{id}` | Fetch or delete one monitor |
-| GET | `/monitors/{id}/stats?window=24h` | Uptime % and average response time |
+| GET | `/monitors/{id}/stats?window=24h` | Uptime %, average and p95 response time |
